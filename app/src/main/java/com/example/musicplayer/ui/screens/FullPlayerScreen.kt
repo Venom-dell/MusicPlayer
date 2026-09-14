@@ -16,12 +16,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.musicplayer.ui.theme.SpotifyBlack
 import com.example.musicplayer.ui.theme.SpotifyGreen
+import com.example.musicplayer.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun FullPlayerScreen(
+    viewModel: PlayerViewModel,
     onBackClick: () -> Unit,
     onEqualizerClick: () -> Unit
 ) {
+    val state by viewModel.playerState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -39,7 +43,7 @@ fun FullPlayerScreen(
             }
             Text("Now Playing", color = Color.White, fontWeight = FontWeight.Bold)
             IconButton(onClick = onEqualizerClick) {
-                Icon(Icons.Default.Settings, "Equalizer", tint = Color.White) // using settings icon as equalizer
+                Icon(Icons.Default.Settings, "Equalizer", tint = Color.White)
             }
         }
 
@@ -65,8 +69,8 @@ fun FullPlayerScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Song Title", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Artist Name", color = Color.LightGray, style = MaterialTheme.typography.bodyLarge)
+                Text(state.currentSongTitle, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(state.currentSongArtist, color = Color.LightGray, style = MaterialTheme.typography.bodyLarge)
             }
             IconButton(onClick = { /* TODO: Add to playlist */ }) {
                 Icon(Icons.Default.FavoriteBorder, "Add to Playlist", tint = Color.White)
@@ -76,10 +80,12 @@ fun FullPlayerScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Progress Bar
-        var progress by remember { mutableFloatStateOf(0.3f) }
+        val progress = if (state.duration > 0) state.currentPosition.toFloat() / state.duration.toFloat() else 0f
         Slider(
             value = progress,
-            onValueChange = { progress = it },
+            onValueChange = { newProgress ->
+                viewModel.seekTo((newProgress * state.duration).toLong())
+            },
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
                 activeTrackColor = Color.White,
@@ -90,8 +96,8 @@ fun FullPlayerScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("1:23", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
-            Text("3:45", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+            Text(formatTime(state.currentPosition), color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+            Text(formatTime(state.duration), color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -102,10 +108,10 @@ fun FullPlayerScreen(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { /* TODO: Shuffle */ }) {
+            IconButton(onClick = { viewModel.toggleShuffle() }) {
                 Icon(Icons.Default.Refresh, "Shuffle", tint = Color.LightGray)
             }
-            IconButton(onClick = { /* TODO: Previous */ }) {
+            IconButton(onClick = { viewModel.skipToPrevious() }) {
                 Icon(Icons.Default.KeyboardArrowLeft, "Previous", tint = Color.White, modifier = Modifier.size(48.dp))
             }
             Box(
@@ -113,19 +119,31 @@ fun FullPlayerScreen(
                     .size(72.dp)
                     .clip(CircleShape)
                     .background(SpotifyGreen)
-                    .clickable { /* TODO: Play/Pause */ },
+                    .clickable { viewModel.togglePlayPause() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.PlayArrow, "Play", tint = Color.Black, modifier = Modifier.size(48.dp))
+                Icon(
+                    imageVector = if (state.isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
+                    contentDescription = if (state.isPlaying) "Pause" else "Play",
+                    tint = Color.Black,
+                    modifier = Modifier.size(48.dp)
+                )
             }
-            IconButton(onClick = { /* TODO: Next */ }) {
+            IconButton(onClick = { viewModel.skipToNext() }) {
                 Icon(Icons.Default.KeyboardArrowRight, "Next", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            IconButton(onClick = { /* TODO: Repeat */ }) {
+            IconButton(onClick = { viewModel.toggleRepeat() }) {
                 Icon(Icons.Default.Refresh, "Repeat", tint = Color.LightGray)
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
     }
+}
+
+private fun formatTime(timeMs: Long): String {
+    val totalSeconds = timeMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%d:%02d", minutes, seconds)
 }

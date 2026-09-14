@@ -1,19 +1,26 @@
 package com.example.musicplayer.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.musicplayer.ui.viewmodels.EqualizerViewModel
 
 @Composable
 fun EqualizerScreen(
-    presets: List<String>,
-    onPresetSelected: (Short) -> Unit,
-    onBandLevelChanged: (Short, Short) -> Unit
+    viewModel: EqualizerViewModel = hiltViewModel()
 ) {
+    val presets by viewModel.presets.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.initEqualizer()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,7 +49,10 @@ fun EqualizerScreen(
                         value = sliderValue,
                         onValueChange = {
                             sliderValue = it
-                            onBandLevelChanged(i.toShort(), (it * 100).toInt().toShort())
+                            // Typically Android band levels are in millibels (e.g. -1500 to 1500)
+                            // This is a simplified scaling for our slider
+                            val level = (it * 1500).toInt().toShort()
+                            viewModel.setBandLevel(i.toShort(), level)
                         },
                         valueRange = -1f..1f,
                         modifier = Modifier.width(100.dp)
@@ -56,9 +66,11 @@ fun EqualizerScreen(
         Text(text = "Presets", color = Color.White)
         Spacer(modifier = Modifier.height(8.dp))
 
-        presets.forEachIndexed { index, preset ->
-            Button(onClick = { onPresetSelected(index.toShort()) }) {
-                Text(text = preset)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            itemsIndexed(presets) { index, preset ->
+                Button(onClick = { viewModel.applyPreset(index.toShort()) }) {
+                    Text(text = preset)
+                }
             }
         }
     }
