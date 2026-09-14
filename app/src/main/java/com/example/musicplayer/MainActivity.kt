@@ -32,8 +32,10 @@ import com.example.musicplayer.ui.screens.LibraryScreen
 import com.example.musicplayer.ui.screens.FullPlayerScreen
 import com.example.musicplayer.ui.screens.EqualizerScreen
 import com.example.musicplayer.ui.theme.MusicPlayerTheme
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.musicplayer.ui.theme.SpotifyBlack
 import com.example.musicplayer.ui.theme.SpotifyDarkGray
+import com.example.musicplayer.ui.viewmodels.PlayerViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -51,6 +53,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    val playerViewModel: PlayerViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
@@ -60,6 +63,7 @@ fun MainScreen() {
 
                 if (currentRoute != Screen.Player.route && currentRoute != Screen.Equalizer.route) {
                     BottomPlayerBar(
+                        viewModel = playerViewModel,
                         onPlayerClick = {
                             navController.navigate(Screen.Player.route)
                         }
@@ -71,7 +75,7 @@ fun MainScreen() {
         containerColor = SpotifyBlack
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            NavigationHost(navController = navController)
+            NavigationHost(navController = navController, playerViewModel = playerViewModel)
         }
     }
 }
@@ -112,7 +116,7 @@ fun BottomNavigationBar(navController: NavHostController) {
 }
 
 @Composable
-fun NavigationHost(navController: NavHostController) {
+fun NavigationHost(navController: NavHostController, playerViewModel: PlayerViewModel) {
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
@@ -122,20 +126,17 @@ fun NavigationHost(navController: NavHostController) {
             HomeScreen()
         }
         composable(Screen.Library.route) {
-            LibraryScreen()
+            LibraryScreen(playerViewModel = playerViewModel)
         }
         composable(Screen.Player.route) {
             FullPlayerScreen(
+                viewModel = playerViewModel,
                 onBackClick = { navController.popBackStack() },
                 onEqualizerClick = { navController.navigate(Screen.Equalizer.route) }
             )
         }
         composable(Screen.Equalizer.route) {
-            EqualizerScreen(
-                presets = listOf("Normal", "Classical", "Dance", "Flat", "Folk", "Heavy Metal", "Hip Hop", "Jazz", "Pop", "Rock"),
-                onPresetSelected = { /* TODO */ },
-                onBandLevelChanged = { band, level -> /* TODO */ }
-            )
+            EqualizerScreen()
         }
     }
 }
